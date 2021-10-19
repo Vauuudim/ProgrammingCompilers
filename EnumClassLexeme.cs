@@ -1,0 +1,1 @@
+public enum ClassLexeme { control, keyword, type, operation, separator, number, standart, variable, NONAME, integer, real, @string};
