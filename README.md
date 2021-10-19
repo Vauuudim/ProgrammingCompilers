@@ -25,6 +25,7 @@
 - qwertyuiop_check.txt
 
 Примеры запуска:
+
 1.
 - dotnet run "C:\Users\User\Desktop\AutoTests1\00 - string.txt" -la
 - Запустит лексический анализ текстового файла "00 - string.txt".
