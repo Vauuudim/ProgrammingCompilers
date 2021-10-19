@@ -1,0 +1,6 @@
+1	1	type	"integer"	integer
+2	1	type	"real"	real
+3	1	type	"char"	char
+4	1	type	"string"	string
+5	1	type	"boolean"	boolean
+6	1	type	"biginteger"	biginteger
