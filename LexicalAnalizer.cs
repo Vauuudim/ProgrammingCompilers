@@ -49,7 +49,7 @@ namespace Programming_Compilers_Pascal
                             lexemesData.Add(new LexemeData(fileReader.indexLine, fileReader.indexSymbol, symbolClass, symbol, symbol));
                             break;
                         }
-                    
+
                         if (symbolClass == ClassLexeme.standart)
                         {
                             if (isNew)
@@ -101,11 +101,6 @@ namespace Programming_Compilers_Pascal
                             isNew = true;
                             currentLexeme = null;
                         }
-                        if (symbol.Equals("\n"))
-                        {
-                            lexemesData.Add(new LexemeData(fileReader.indexLine, fileReader.indexSymbol, symbolClass, symbol, symbol));
-                            isNew = true;
-                        }
                     }
 
                     if (currentLexeme != null)
@@ -140,7 +135,8 @@ namespace Programming_Compilers_Pascal
                         string nextLexemeCode = lexemesData[i + 1].code;
                         while (!nextLexemeCode.Equals("\'"))
                         {
-                            if (nextLexemeCode.Equals("\n"))
+                            int nextLexemeIndexLine = lexemesData[i + 1].indexLine;
+                            if (lexemesData[i].indexLine != nextLexemeIndexLine)
                             {
                                 SaveError(lexemesData[i], "closing symbol not found");
                                 return;
@@ -154,7 +150,7 @@ namespace Programming_Compilers_Pascal
                             if (i == lexemesData.Count - 1)
                             {
                                 SaveError(lexemesData[i], "closing symbol not found");
-                                return;
+                                break;
                             }
 
                             nextLexemeCode = lexemesData[i + 1].code;
@@ -210,12 +206,6 @@ namespace Programming_Compilers_Pascal
                         lexemesData.Remove(lexemesData[i + 2]);
                         lexemesData.Remove(lexemesData[i + 1]);
                     }
-                }
-
-                if (lexemesData[i].classLexeme == ClassLexeme.control)
-                {
-                    lexemesData.Remove(lexemesData[i]);
-                    i--;
                 }
             }
         }
