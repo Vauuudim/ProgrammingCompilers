@@ -1,0 +1,8 @@
+1	1	operation	"-"	-
+2	1	operation	"+"	+
+3	1	operation	"="	=
+4	1	operation	">"	>
+5	1	operation	"<"	<
+5	2	operation	">"	>
+6	1	operation	"div"	div
+7	1	operation	"mod"	mod
