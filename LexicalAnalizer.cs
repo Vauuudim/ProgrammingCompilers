@@ -101,10 +101,17 @@ namespace Programming_Compilers_Pascal
                             isNew = true;
                             currentLexeme = null;
                         }
+                        if (symbol.Equals("\n"))
+                        {
+                            lexemesData.Add(new LexemeData(fileReader.indexLine, fileReader.indexSymbol, symbolClass, symbol, symbol));
+                            isNew = true;
+                        }
                     }
 
                     if (currentLexeme != null)
+                    {
                         currentLexemeClass = LexemeVerification.GetClass(currentLexeme);
+                    }
                 }
 
                 if (currentLexeme != null & !isNew)
@@ -126,7 +133,6 @@ namespace Programming_Compilers_Pascal
         {
             for (int i = 0; i < lexemesData.Count; i++)
             {
-                
                 if (lexemesData[i].code.Equals("\'"))
                 {
                     if (i < lexemesData.Count - 1)
@@ -134,6 +140,12 @@ namespace Programming_Compilers_Pascal
                         string nextLexemeCode = lexemesData[i + 1].code;
                         while (!nextLexemeCode.Equals("\'"))
                         {
+                            if (nextLexemeCode.Equals("\n"))
+                            {
+                                SaveError(lexemesData[i], "closing symbol not found");
+                                return;
+                            }
+
                             lexemesData[i].code += nextLexemeCode;
                             lexemesData[i].value += nextLexemeCode;
                             lexemesData.Remove(lexemesData[i + 1]);
@@ -142,7 +154,7 @@ namespace Programming_Compilers_Pascal
                             if (i == lexemesData.Count - 1)
                             {
                                 SaveError(lexemesData[i], "closing symbol not found");
-                                break;
+                                return;
                             }
 
                             nextLexemeCode = lexemesData[i + 1].code;
@@ -153,9 +165,8 @@ namespace Programming_Compilers_Pascal
                             lexemesData[i].code += nextLexemeCode;
                             lexemesData[i].value += nextLexemeCode;
                             lexemesData.Remove(lexemesData[i + 1]);
+                            lexemesData[i].classLexeme = ClassLexeme.@string;
                         }
-
-                        lexemesData[i].classLexeme = ClassLexeme.@string;
                     }
                     else
                     {
@@ -200,6 +211,12 @@ namespace Programming_Compilers_Pascal
                         lexemesData.Remove(lexemesData[i + 1]);
                     }
                 }
+
+                if (lexemesData[i].classLexeme == ClassLexeme.control)
+                {
+                    lexemesData.Remove(lexemesData[i]);
+                    i--;
+                }
             }
         }
 
@@ -230,4 +247,3 @@ namespace Programming_Compilers_Pascal
         }
     }
 }
-//Double.Parse();
