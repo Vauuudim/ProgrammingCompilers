@@ -1,3 +1,0 @@
-1	1	string	"'IT IS STROKA'"	'IT IS STROKA'
-2	1	string	"'0123456789'"	'0123456789'
-3	1	string	"'#%_'"	'#%_'

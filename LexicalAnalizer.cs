@@ -136,6 +136,7 @@ namespace Programming_Compilers_Pascal
                         while (!nextLexemeCode.Equals("\'"))
                         {
                             int nextLexemeIndexLine = lexemesData[i + 1].indexLine;
+
                             if (lexemesData[i].indexLine != nextLexemeIndexLine)
                             {
                                 SaveError(lexemesData[i], "closing symbol not found");
@@ -179,14 +180,6 @@ namespace Programming_Compilers_Pascal
 
             for (int i = 0; i < lexemesData.Count; i++)
             {
-                if (i < lexemesData.Count - 1)
-                {
-                    if (lexemesData[i].code.Equals(".") & (lexemesData[i + 1].classLexeme == ClassLexeme.variable | lexemesData[i + 1].classLexeme == ClassLexeme.integer | lexemesData[i + 1].classLexeme == ClassLexeme.@string))
-                    {
-                        SaveError(lexemesData[i], "incorrect variable format");
-                    }
-                }
-
                 if (i < lexemesData.Count - 3)
                 {
                     if ((lexemesData[i].classLexeme == ClassLexeme.variable | lexemesData[i].classLexeme == ClassLexeme.integer | lexemesData[i].classLexeme == ClassLexeme.real | lexemesData[i].classLexeme == ClassLexeme.@string) & lexemesData[i + 1].code.Equals(".") & (lexemesData[i].classLexeme == ClassLexeme.variable | lexemesData[i].classLexeme == ClassLexeme.integer | lexemesData[i].classLexeme == ClassLexeme.real | lexemesData[i].classLexeme == ClassLexeme.@string) & lexemesData[i + 3].code.Equals("."))
@@ -199,12 +192,20 @@ namespace Programming_Compilers_Pascal
                 {
                     if (lexemesData[i].classLexeme == ClassLexeme.integer & lexemesData[i + 1].code.Equals(".") & lexemesData[i + 2].classLexeme == ClassLexeme.integer)
                     {
-                        lexemesData[i].value = double.Parse(lexemesData[i].code + "," + lexemesData[i + 2].code).ToString();
-                        lexemesData[i].code += "." + lexemesData[i + 2].code;
-                        lexemesData[i].classLexeme = ClassLexeme.real;
+                        if (lexemesData[i].indexLine == lexemesData[i + 1].indexLine & lexemesData[i].indexLine == lexemesData[i + 2].indexLine)
+                        {
+                            lexemesData[i].value = double.Parse(lexemesData[i].code + "," + lexemesData[i + 2].code).ToString();
+                            lexemesData[i].code += "." + lexemesData[i + 2].code;
+                            lexemesData[i].classLexeme = ClassLexeme.real;
 
-                        lexemesData.Remove(lexemesData[i + 2]);
-                        lexemesData.Remove(lexemesData[i + 1]);
+                            lexemesData.Remove(lexemesData[i + 2]);
+                            lexemesData.Remove(lexemesData[i + 1]);
+                        }
+                        else
+                        {
+                            SaveError(lexemesData[i + 2], "incorrect variable format");
+                        }
+
                     }
                 }
             }
