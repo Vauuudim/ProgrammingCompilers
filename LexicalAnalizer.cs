@@ -30,11 +30,11 @@ namespace Programming_Compilers_Pascal
         {
             using (StreamReader streamReader = new StreamReader(filePath))
             {
-                FileReader fileReader = new FileReader(streamReader);
+                FileReader fr = new FileReader(streamReader);
 
-                while (fileReader.isEnd | errorLexeme == null)
+                while (errorLexeme == null)
                 {
-                    string symbol = fileReader.ReadSymbol();
+                    string symbol = fr.ReadNextSymbolAndChangeIndexes();
 
                     if (symbol == null)
                         break;
@@ -45,8 +45,8 @@ namespace Programming_Compilers_Pascal
                     {
                         if (symbolClass == ClassLexeme.NONAME)
                         {
-                            SaveError(fileReader.indexLine, fileReader.indexSymbol, symbol, "found unknown symbol");
-                            lexemesData.Add(new LexemeData(fileReader.indexLine, fileReader.indexSymbol, symbolClass, symbol, symbol));
+                            SaveError(fr.GetIndexLine(), fr.GetIndexSymbol(), symbol, "found unknown symbol");
+                            lexemesData.Add(new LexemeData(fr.GetIndexLine(), fr.GetIndexSymbol(), symbolClass, symbol, symbol));
                             break;
                         }
 
@@ -54,8 +54,8 @@ namespace Programming_Compilers_Pascal
                         {
                             if (isNew)
                             {
-                                currentIndexLine = fileReader.indexLine;
-                                currentIndexInLine = fileReader.indexSymbol;
+                                currentIndexLine = fr.GetIndexLine();
+                                currentIndexInLine = fr.GetIndexSymbol();
                             }
                             currentLexeme += symbol;
                             isNew = false;
@@ -77,7 +77,7 @@ namespace Programming_Compilers_Pascal
                         {
                             if (symbolClass == ClassLexeme.standart)
                                 symbolClass = ClassLexeme.variable;
-                            lexemesData.Add(new LexemeData(fileReader.indexLine, fileReader.indexSymbol, symbolClass, symbol, symbol));
+                            lexemesData.Add(new LexemeData(fr.GetIndexLine(), fr.GetIndexSymbol(), symbolClass, symbol, symbol));
 
                             if (currentLexeme != null & !isNew)
                             {
@@ -132,42 +132,20 @@ namespace Programming_Compilers_Pascal
                 {
                     if (i < lexemesData.Count - 1)
                     {
-                        string nextLexemeCode = lexemesData[i + 1].code;
-                        while (!nextLexemeCode.Equals("\'"))
+                        int nextLexemeIndex = i + 1;
+                        while (!lexemesData[nextLexemeIndex].code.Equals("\'"))
                         {
-                            int nextLexemeIndexLine = lexemesData[i + 1].indexLine;
-
-                            if (lexemesData[i].indexLine != nextLexemeIndexLine)
+                            if (lexemesData[i].indexLine != lexemesData[nextLexemeIndex].indexLine | i == lexemesData.Count - 1)
                             {
                                 SaveError(lexemesData[i], "closing symbol not found");
                                 return;
                             }
 
-                            lexemesData[i].code += nextLexemeCode;
-                            lexemesData[i].value += nextLexemeCode;
-                            lexemesData.Remove(lexemesData[i + 1]);
-                            nextLexemeCode = null;
-
-                            if (i == lexemesData.Count - 1)
-                            {
-                                SaveError(lexemesData[i], "closing symbol not found");
-                                break;
-                            }
-
-                            nextLexemeCode = lexemesData[i + 1].code;
+                            AddToCurrentAndRemoveNextLexeme(lexemesData[i], lexemesData[i + 1]);
                         }
 
-                        if (nextLexemeCode != null)
-                        {
-                            lexemesData[i].code += nextLexemeCode;
-                            lexemesData[i].value += nextLexemeCode;
-                            lexemesData.Remove(lexemesData[i + 1]);
-                            lexemesData[i].classLexeme = ClassLexeme.@string;
-                        }
-                    }
-                    else
-                    {
-                        SaveError(lexemesData[i], "closing symbol not found");
+                        AddToCurrentAndRemoveNextLexeme(lexemesData[i], lexemesData[i + 1]);
+                        lexemesData[i].classLexeme = ClassLexeme.@string;
                     }
                 }
 
@@ -209,6 +187,13 @@ namespace Programming_Compilers_Pascal
                     }
                 }
             }
+        }
+
+        private void AddToCurrentAndRemoveNextLexeme(LexemeData currentLexeme, LexemeData nextLexeme)
+        {
+            currentLexeme.code += nextLexeme.code;
+            currentLexeme.value += nextLexeme.code;
+            lexemesData.Remove(nextLexeme);
         }
 
         private bool IsInt(string lexeme)

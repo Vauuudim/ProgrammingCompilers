@@ -4,9 +4,8 @@ namespace Programming_Compilers_Pascal
 {
     public class FileReader
     {
-        public int indexSymbol = 0;
-        public int indexLine = 1;
-        public bool isEnd = true;
+        private int indexSymbol = 0;
+        private int indexLine = 1;
 
         private bool isNewLine = false;
         private StreamReader streamReader;
@@ -16,30 +15,40 @@ namespace Programming_Compilers_Pascal
             this.streamReader = streamReader;
         }
 
-        public string ReadSymbol()
+        public string ReadNextSymbolAndChangeIndexes()
         {
+            string symbol = null;
+            int charIndex = streamReader.Read();
+
+            if (charIndex != -1)
+            {
+                ChangeIndexLineAndSymbol();
+                symbol = "" + (char)charIndex;
+                isNewLine = symbol.Equals("\n") ? true : false;
+            }
+
+            return symbol;
+        }
+
+        private void ChangeIndexLineAndSymbol()
+        {
+            indexSymbol++;
             if (isNewLine)
             {
                 indexLine++;
-                indexSymbol = 0;
+                indexSymbol = 1;
                 isNewLine = false;
             }
-                
-            indexSymbol++;
+        }
 
-            int charIndex = streamReader.Read();
-            if (charIndex == -1)
-            {
-                isEnd = false;
-                return null;
-            }
+        public int GetIndexSymbol()
+        {
+            return indexSymbol;
+        }
 
-            string symbol = "" + (char)charIndex;
-
-            if (((char)charIndex).Equals('\n'))
-                isNewLine = true;
-
-            return symbol;
+        public int GetIndexLine()
+        {
+            return indexLine;
         }
     }
 }
