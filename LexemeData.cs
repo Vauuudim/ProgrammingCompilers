@@ -16,5 +16,10 @@ namespace Programming_Compilers_Pascal
             this.value = value;
             this.code = code;
         }
+
+        public void SetClass(ClassLexeme newClass)
+        {
+            classLexeme = newClass;
+        }
     }
 }
