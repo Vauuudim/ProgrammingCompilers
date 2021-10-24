@@ -8,11 +8,9 @@ namespace Programming_Compilers_Pascal
     {
         private List<LexemeData> lexemesData = new List<LexemeData>();
         private string filePath = "";
+        private bool autotest;
 
-        public int errorLineIndex = 0;
-        public int errorSymbolIndex = 0;
-        public string errorLexeme = null;
-        public string errorText = null;
+        private ErrorData errorData = new ErrorData();
 
         private string currentLexeme = null;
         private int currentIndexLine = 0;
@@ -23,9 +21,10 @@ namespace Programming_Compilers_Pascal
         private string symbol;
         private bool isNew = true;
 
-        public LexicalAnalizer (string filePath)
+        public LexicalAnalizer (string filePath, bool autotest = false)
         {
             this.filePath = filePath;
+            this.autotest = autotest;
         }
 
         public List<LexemeData> Аnalysis()
@@ -33,7 +32,7 @@ namespace Programming_Compilers_Pascal
             using (StreamReader streamReader = new StreamReader(filePath))
             {
                 fileReader = new FileReader(streamReader);
-                while (errorLexeme == null)
+                while (errorData.IsProblemIsNull())
                 {
                     symbol = fileReader.ReadNextSymbolAndChangeIndexes();
                     if (symbol == null)
@@ -88,7 +87,45 @@ namespace Programming_Compilers_Pascal
             }
 
             MakeEdits();
+            OutputResults();
             return lexemesData;
+        }
+
+        private void OutputResults()
+        {
+            if (!autotest)
+            {
+                for (int i = 0; i < lexemesData.Count; i++)
+                {
+                    if (!errorData.IsProblemIsNull())
+                    {
+                        if (errorData.GetLineIndex() == lexemesData[i].indexLine & errorData.GetSymbolIndex() == lexemesData[i].indexInLine)
+                        {
+                            Console.WriteLine("" + lexemesData[i].indexLine + '\t' + lexemesData[i].indexInLine + '\t' + errorData.GetErrorText());
+                            break;
+                        }
+                    }
+                    Console.WriteLine("" + lexemesData[i].indexLine + '\t' + lexemesData[i].indexInLine + '\t' + lexemesData[i].classLexeme + '\t' + "\"" + lexemesData[i].value + "\"" + '\t' + lexemesData[i].code);
+                }
+            }
+            else
+            {
+                using (StreamWriter streamWriter = new StreamWriter(filePath.Remove(filePath.Length - 4, 4) + "_output.txt"))
+                {
+                    for (int i = 0; i < lexemesData.Count; i++)
+                    {
+                        if (!errorData.IsProblemIsNull())
+                        {
+                            if (errorData.GetLineIndex() == lexemesData[i].indexLine & errorData.GetSymbolIndex() == lexemesData[i].indexInLine)
+                            {
+                                streamWriter.WriteLine("" + lexemesData[i].indexLine + '\t' + lexemesData[i].indexInLine + '\t' + errorData.GetErrorText());
+                                break;
+                            }
+                        }
+                        streamWriter.WriteLine("" + lexemesData[i].indexLine + '\t' + lexemesData[i].indexInLine + '\t' + lexemesData[i].classLexeme + '\t' + "\"" + lexemesData[i].value + "\"" + '\t' + lexemesData[i].code);
+                    }
+                }
+            }
         }
 
         private void CheckAndAddLexemeToListAndUpdateParameters()
@@ -118,9 +155,7 @@ namespace Programming_Compilers_Pascal
             currentLexeme = null;
         }
 
-        /// <summary>
-        /// Проверяет равен ли класс одному из указанных.
-        /// </summary>
+        ///<summary> Проверяет равен ли класс одному из указанных. </summary>
         private bool IsRequiredСlass(ClassLexeme lexemeClass, params ClassLexeme[] classes)
         {
             for (int i = 0; i < classes.Length; i++)
@@ -216,18 +251,18 @@ namespace Programming_Compilers_Pascal
 
         private void SaveErrorForLexeme(LexemeData lexemeData, string errorMessage = "")
         {
-            errorLineIndex = lexemeData.indexLine;
-            errorSymbolIndex = lexemeData.indexInLine;
-            errorLexeme = lexemeData.code;
-            errorText = "error: " + errorMessage;
+            errorData = new ErrorData(lexemeData.indexLine, lexemeData.indexInLine, "error: " + errorMessage + " (" + lexemeData.code + ")");
         }
 
         private void SaveErrorForSymbol(string errorMessage = "")
         {
-            errorSymbolIndex = fileReader.GetIndexSymbol();
-            errorLineIndex = fileReader.GetIndexLine();
-            errorLexeme = symbol;
-            errorText = "error: " + errorMessage;
+            errorData = new ErrorData(fileReader.GetIndexLine(), fileReader.GetIndexSymbol(), "error: " + errorMessage + " (" + symbol + ")");
+        }
+
+        public ErrorData GetError()
+        {
+            //return errorData.IsProblemIdentified() ? errorData : null;
+            return errorData;
         }
     }
 }

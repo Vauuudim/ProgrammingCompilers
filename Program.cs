@@ -17,9 +17,10 @@ namespace Programming_Compilers_Pascal
             SaveParameters(input);
             СheckParameters();
             SelectMode();
-            Сomparison();
-        }
 
+            if (autotest)
+                AutoTester.AutoTest(filePath);   
+        }
 
         private static void SaveParameters(string[] input)
         {
@@ -29,6 +30,7 @@ namespace Programming_Compilers_Pascal
                     autotest = true;
                 else
                     Console.WriteLine("Error: incorrect autotest command.");
+
                 filePath = input[0];
                 mode = input[1];
             }
@@ -88,11 +90,32 @@ namespace Programming_Compilers_Pascal
         {
             if (mode.Equals("-la"))
             {
-                LexicalAnalysis();
+                LexicalAnalizer();
             }
             else if (mode.Equals("-sa"))
             {
                 SyntaxAnalizer();
+            }
+        }
+
+        private static void LexicalAnalizer()
+        {
+            if (!autotest)
+            {
+                LexicalAnalizer lexicalAnalizer = new LexicalAnalizer(filePath);
+                List<LexemeData> lexemesData = lexicalAnalizer.Аnalysis();
+            }
+            else
+            {
+                string[] filesPath = Directory.GetFiles(filePath);
+                for (int j = 0; j < filesPath.Length; j++)
+                {
+                    if (!filesPath[j].Contains("check") & !filesPath[j].Contains("output"))
+                    {
+                        LexicalAnalizer lexicalAnalizer = new LexicalAnalizer(filesPath[j], true);
+                        List<LexemeData> lexemesData = lexicalAnalizer.Аnalysis();
+                    }
+                }
             }
         }
 
@@ -108,126 +131,16 @@ namespace Programming_Compilers_Pascal
             else
             {
                 string[] filesPath = Directory.GetFiles(filePath);
-                if (filesPath.Length > 0)
+                for (int j = 0; j < filesPath.Length; j++)
                 {
-                    for (int j = 0; j < filesPath.Length; j++)
+                    if (!filesPath[j].Contains("check") & !filesPath[j].Contains("output"))
                     {
-                        if (!filesPath[j].Contains("check") & !filesPath[j].Contains("output"))
-                        {
-                            LexicalAnalizer lexicalAnalizer = new LexicalAnalizer(filesPath[j]);
-                            List<LexemeData> lexemesData = lexicalAnalizer.Аnalysis();
-                            SyntaxAnalizer syntaxAnalizer = new SyntaxAnalizer(lexemesData, filesPath[j]);
-                            syntaxAnalizer.Analise();
-                        }
+                        LexicalAnalizer lexicalAnalizer = new LexicalAnalizer(filesPath[j], true);
+                        List<LexemeData> lexemesData = lexicalAnalizer.Аnalysis();
+                        SyntaxAnalizer syntaxAnalizer = new SyntaxAnalizer(lexemesData, filesPath[j]);
+                        syntaxAnalizer.Analise();
                     }
                 }
-            }
-        }
-
-        private static List<LexemeData> LexicalAnalysis()
-        {
-            if (!autotest)
-            {
-                LexicalAnalizer lexicalAnalizer = new LexicalAnalizer(filePath);
-                List<LexemeData> lexemesData = lexicalAnalizer.Аnalysis();
-
-                for (int i = 0; i < lexemesData.Count; i++)
-                {
-                    if (lexicalAnalizer.errorLineIndex == lexemesData[i].indexLine & lexicalAnalizer.errorSymbolIndex == lexemesData[i].indexInLine)
-                    {
-                        Console.WriteLine("" + lexemesData[i].indexLine + '\t' + lexemesData[i].indexInLine + '\t' + lexicalAnalizer.errorText + " (" + lexicalAnalizer.errorLexeme + ")");
-                        break;
-                    }
-                    Console.WriteLine("" + lexemesData[i].indexLine + '\t' + lexemesData[i].indexInLine + '\t' + lexemesData[i].classLexeme + '\t' + lexemesData[i].value + '\t' + lexemesData[i].code);
-                }
-                return lexemesData;
-            }
-            else
-            {
-                string[] filesPath = Directory.GetFiles(filePath);
-                if (filesPath.Length > 0)
-                {
-                    for (int j = 0; j < filesPath.Length; j++)
-                    {
-                        if (!filesPath[j].Contains("check") & !filesPath[j].Contains("output"))
-                        {
-                            LexicalAnalizer lexicalAnalizer = new LexicalAnalizer(filesPath[j]);
-                            List<LexemeData> lexemesData = lexicalAnalizer.Аnalysis();
-
-                            using (StreamWriter streamWriter = new StreamWriter(filesPath[j].Remove(filesPath[j].Length - 4, 4) + "_output.txt"))
-                            {
-                                for (int i = 0; i < lexemesData.Count; i++)
-                                {
-                                    if (lexicalAnalizer.errorLineIndex == lexemesData[i].indexLine & lexicalAnalizer.errorSymbolIndex == lexemesData[i].indexInLine)
-                                    {
-                                        streamWriter.WriteLine("" + lexemesData[i].indexLine + '\t' + lexemesData[i].indexInLine + '\t' + lexicalAnalizer.errorText + " (" + lexicalAnalizer.errorLexeme + ")");
-                                        break;
-                                    }
-                                    else
-                                    {
-                                        streamWriter.WriteLine("" + lexemesData[i].indexLine + '\t' + lexemesData[i].indexInLine + '\t' + lexemesData[i].classLexeme + '\t' + '"' + lexemesData[i].value + '"' + '\t' + lexemesData[i].code);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    Console.WriteLine("Files not found");
-                }
-                return null;
-            }
-        }
-
-        private static void Сomparison()
-        {
-            if (autotest)
-            {
-                List<string> checks = new List<string>();
-                List<string> outputs = new List<string>();
-
-                string[] filesPath = Directory.GetFiles(filePath);
-                if (filesPath.Length > 0)
-                {
-                    for (int i = 0; i < filesPath.Length; i++)
-                    {
-                        if (filesPath[i].Contains("check"))
-                        {
-                            using (StreamReader streamReader = new StreamReader(filesPath[i]))
-                            {
-                                checks.Add(streamReader.ReadToEnd());
-                            }
-                        }
-
-                        if (filesPath[i].Contains("output"))
-                        {
-                            using (StreamReader streamReader = new StreamReader(filesPath[i]))
-                            {
-                                outputs.Add(streamReader.ReadToEnd());
-                            }
-                        }
-                    }
-                }
-
-                int trueCount = 0;
-                int test = 1;
-                for (int i = 0; i < checks.Count; i++)
-                {
-                    bool isEquals = false;
-                    if (checks[i].Equals(outputs[i]))
-                    {
-                        isEquals = true;
-                        trueCount++;
-                    }
-                    
-                    Console.WriteLine("Test " + test + " " + isEquals);
-                    test++;
-                }
-
-                Console.WriteLine("--------------------------------");
-                Console.WriteLine("Number of completed tests: " + trueCount);
-                Console.WriteLine("Number of failed tests: " + (test - trueCount - 1));
             }
         }
     }
