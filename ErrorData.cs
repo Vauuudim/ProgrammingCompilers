@@ -2,20 +2,15 @@ namespace Programming_Compilers_Pascal
 {
     public class ErrorData
     {
-        public int errorLineIndex;
-        public int errorSymbolIndex;
-        public string errorText;
+        private int errorLineIndex;
+        private int errorSymbolIndex;
+        private string errorText;
 
         public ErrorData (int errorLineIndex = 0, int errorSymbolIndex = 0, string errorText = null)
         {
             this.errorLineIndex = errorLineIndex;
             this.errorSymbolIndex = errorSymbolIndex;
             this.errorText = errorText;
-        }
-
-        public ErrorData GetError()
-        {
-            return new ErrorData(errorLineIndex, errorSymbolIndex, errorText);
         }
 
         public int GetLineIndex()
