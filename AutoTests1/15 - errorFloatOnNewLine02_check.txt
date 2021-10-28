@@ -1,5 +1,4 @@
 1	1	real	"156,12"	156.12
 2	1	real	"4,00005"	4.00005
 3	1	integer	"12345"	12345
-4	1	separator	"."	.
-4	2	error: incorrect variable format (6)
+4	1	error: incorrect variable format (.6)

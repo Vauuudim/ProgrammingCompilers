@@ -1,0 +1,9 @@
+1	1	real	"4,5"	4.5
+1	4	operation	"+"	+
+1	5	separator	"("	(
+1	6	real	"6,1245"	6.1245
+1	12	operation	"+"	+
+1	13	integer	"5"	5
+1	14	separator	")"	)
+1	15	operation	"+"	+
+1	16	real	"1,31"	1.31

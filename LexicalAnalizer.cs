@@ -8,250 +8,385 @@ namespace Programming_Compilers_Pascal
     {
         private List<LexemeData> lexemesData = new List<LexemeData>();
         private string filePath = "";
-        private bool autotest;
-
+        private FileReader fileReader;
         private ErrorData errorData = new ErrorData();
 
         private string currentLexeme = null;
+        private string currentLexemeValue = null;
         private int currentIndexLine = 0;
-        private int currentIndexInLine = 0;
+        private int currentIndexSymbol = 0;
         private ClassLexeme currentLexemeClass;
 
-        private FileReader fileReader;
-        private string symbol;
-        private bool isNew = true;
+        private string previousLexeme = null;
+        private int previousLexemeIndexLine = 0;
+        private int previousLexemeIndexSymbol = 0;
 
-        public LexicalAnalizer (string filePath, bool autotest = false)
+        private string symbol = null;
+        private ClassLexeme symbolClass;
+
+        private string previousSymbol = null;
+        private ClassLexeme previousSymbolClass;
+
+        public LexicalAnalizer(string filePath)
         {
             this.filePath = filePath;
-            this.autotest = autotest;
         }
 
-        public List<LexemeData> ¿nalysis()
+        public List<LexemeData> GetNewListLexemesData()
         {
+            errorData = new ErrorData();
             using (StreamReader streamReader = new StreamReader(filePath))
             {
                 fileReader = new FileReader(streamReader);
                 while (errorData.IsProblemIsNull())
                 {
-                    symbol = fileReader.ReadNextSymbolAndChangeIndexes();
-                    if (symbol == null)
-                    {
+                    LexemeData lexeme = GetNextLexeme();
+                    if (lexeme == null)
                         break;
-                    }
-
-                    ClassLexeme symbolClass = LexemeVerification.GetClass(symbol);
-                    if (!IsRequired—lass(symbolClass, ClassLexeme.control))
-                    {
-                        if (IsRequired—lass(symbolClass, ClassLexeme.NONAME))
-                        {
-                            SaveErrorForSymbol("found unknown symbol");
-                            lexemesData.Add(new LexemeData(fileReader.GetIndexLine(), fileReader.GetIndexSymbol(), symbolClass, symbol, symbol));
-                            break;
-                        }
-
-                        if (IsRequired—lass(symbolClass, ClassLexeme.standart))
-                        {
-                            if (isNew)
-                            {
-                                currentIndexLine = fileReader.GetIndexLine();
-                                currentIndexInLine = fileReader.GetIndexSymbol();
-                            }
-                            currentLexeme += symbol;
-                            isNew = false;
-                        }
-                        else
-                        {
-                            CheckAndAddLexemeToListAndUpdateParameters();
-                        }
-
-                        if (IsRequired—lass(symbolClass, ClassLexeme.keyword, ClassLexeme.operation, ClassLexeme.type, ClassLexeme.separator))
-                        {
-                            if (IsRequired—lass(symbolClass, ClassLexeme.standart))
-                                symbolClass = ClassLexeme.variable;
-                            lexemesData.Add(new LexemeData(fileReader.GetIndexLine(), fileReader.GetIndexSymbol(), symbolClass, symbol, symbol));
-                            CheckAndAddLexemeToListAndUpdateParameters();
-                        }
-                    }
-                    else
-                    {
-                        CheckAndAddLexemeToListAndUpdateParameters();
-                    }
-
-                    if (currentLexeme != null)
-                    {
-                        currentLexemeClass = LexemeVerification.GetClass(currentLexeme);
-                    }
+                    if (errorData.IsProblemIsNull())
+                        lexemesData.Add(lexeme);
                 }
-                CheckAndAddLexemeToListAndUpdateParameters();
             }
-
-            MakeEdits();
-            OutputResults();
             return lexemesData;
         }
 
-        private void OutputResults()
+        public LexemeData GetNextLexeme()
         {
-            if (!autotest)
+            LexemeData lexemeData = null;
+
+            currentLexeme = null;
+
+            if (symbol == null)
+                if (VerifyNextSymbolAndCheckOnNull())
+                    return lexemeData;
+
+            //SPACE/CONTROL
+            SkipSpaceAndControl();
+
+            //RUS...
+            if (IsRequired—lass(symbolClass, ClassLexeme.NONAME))
             {
-                for (int i = 0; i < lexemesData.Count; i++)
-                {
-                    if (!errorData.IsProblemIsNull())
-                    {
-                        if (errorData.GetLineIndex() == lexemesData[i].indexLine & errorData.GetSymbolIndex() == lexemesData[i].indexInLine)
-                        {
-                            Console.WriteLine("" + lexemesData[i].indexLine + '\t' + lexemesData[i].indexInLine + '\t' + errorData.GetErrorText());
-                            break;
-                        }
-                    }
-                    Console.WriteLine("" + lexemesData[i].indexLine + '\t' + lexemesData[i].indexInLine + '\t' + lexemesData[i].classLexeme + '\t' + "\"" + lexemesData[i].value + "\"" + '\t' + lexemesData[i].code);
-                }
+                SaveErrorForSymbol("found unknown symbol");
+                return lexemeData;
             }
-            else
+
+            //COMMENTARY
+            if (symbol.Equals("/"))
             {
-                using (StreamWriter streamWriter = new StreamWriter(filePath.Remove(filePath.Length - 4, 4) + "_output.txt"))
+                if (previousSymbol != null)
                 {
-                    for (int i = 0; i < lexemesData.Count; i++)
+                    if (previousSymbol.Equals("/") & symbol.Equals("/"))
                     {
-                        if (!errorData.IsProblemIsNull())
+                        lexemesData.Remove(lexemesData[lexemesData.Count - 1]);
+                        SkipCommentary();
+                    }
+                }
+
+                previousSymbol = symbol;
+                previousSymbolClass = symbolClass;           
+
+                if (symbol == null)
+                    return lexemeData;
+            }
+
+            //STRINGS
+            if (symbol.Equals("'"))
+            {
+                SaveIndexes();
+                currentLexeme = symbol;
+
+                if (VerifyNextSymbolAndCheckOnNull())
+                {
+                    SaveErrorForLexeme("closing symbol not found");
+                    return lexemeData;
+                }
+
+                while (!symbol.Equals("'"))
+                {
+                    currentLexeme += symbol;
+                    if (VerifyNextSymbolAndCheckOnNull())
+                    {
+                        SaveErrorForLexeme("closing symbol not found");
+                        return lexemeData;
+                    }
+                    if (currentIndexLine != fileReader.GetIndexLine())
+                    {
+                        currentLexeme = currentLexeme.Remove(currentLexeme.Length - 2, 2);
+                        SaveErrorForLexeme("closing symbol not found");
+                        return lexemeData;
+                    }
+                }
+                currentLexeme += symbol;
+                symbol = null;
+                return new LexemeData(currentIndexLine, currentIndexSymbol, ClassLexeme.@string, currentLexeme, currentLexeme);
+            }
+
+            //OPERATIONS
+            if (IsRequired—lass(symbolClass, ClassLexeme.operation))
+            {
+                SaveIndexes();
+
+                previousSymbol = symbol;
+                previousSymbolClass = symbolClass;
+
+                if (VerifyNextSymbolAndCheckOnNull())
+                    return lexemeData;
+
+                currentLexeme = previousSymbol + symbol;
+                currentLexemeClass = LexemeVerification.GetClass(currentLexeme);
+
+                if (IsRequired—lass(symbolClass, ClassLexeme.operation))
+                {
+                    if (IsTwoSymbolOperation())
+                    {
+                        symbol = null;
+                        return new LexemeData(currentIndexLine, currentIndexSymbol, currentLexemeClass, currentLexeme, currentLexeme);
+                    }
+                }
+                        
+                return new LexemeData(currentIndexLine, currentIndexSymbol, previousSymbolClass, previousSymbol, previousSymbol);
+            }
+
+            //COMPOSITE (MULTI-LETTER) / NUMBERS
+            if (IsRequired—lass(symbolClass, ClassLexeme.standart))
+            {
+                SaveIndexes();
+                int dotCount = 0;
+                while (IsRequired—lass(symbolClass, ClassLexeme.standart))
+                {
+                    currentLexeme += symbol;
+                    currentLexemeClass = LexemeVerification.GetClass(currentLexeme);
+
+                    if (IsRequired—lass(currentLexemeClass, ClassLexeme.keyword, ClassLexeme.type, ClassLexeme.operation))
+                    {
+                        LexemeData newLexeme = null;
+                        if (previousLexeme != null)
                         {
-                            if (errorData.GetLineIndex() == lexemesData[i].indexLine & errorData.GetSymbolIndex() == lexemesData[i].indexInLine)
+                            ClassLexeme newClass = LexemeVerification.GetClass(previousLexeme + currentLexeme);
+                            if (IsRequired—lass(newClass, ClassLexeme.keyword, ClassLexeme.type, ClassLexeme.operation))
                             {
-                                streamWriter.WriteLine("" + lexemesData[i].indexLine + '\t' + lexemesData[i].indexInLine + '\t' + errorData.GetErrorText());
-                                break;
+                                currentLexeme = previousLexeme + currentLexeme;
+                                UpdateCurrentLexeme();
+
+                                newLexeme = new LexemeData(previousLexemeIndexLine, previousLexemeIndexSymbol, currentLexemeClass, currentLexeme, currentLexeme);
+                                previousLexeme = currentLexeme;
                             }
                         }
-                        streamWriter.WriteLine("" + lexemesData[i].indexLine + '\t' + lexemesData[i].indexInLine + '\t' + lexemesData[i].classLexeme + '\t' + "\"" + lexemesData[i].value + "\"" + '\t' + lexemesData[i].code);
+                        if (newLexeme != null)
+                        {
+                            lexemesData.Remove(lexemesData[lexemesData.Count - 1]);
+                            symbol = null;
+                            previousLexeme = null;
+                            return newLexeme;
+                        }
+                        symbol = null;
+                        previousLexeme = currentLexeme;
+                        previousLexemeIndexLine = currentIndexLine;
+                        previousLexemeIndexSymbol = currentIndexSymbol;
+                        return new LexemeData(currentIndexLine, currentIndexSymbol, currentLexemeClass, currentLexeme, currentLexeme);
+                    }
+
+                    if (previousLexeme != null)
+                    {
+                        LexemeData newLexeme = null;
+                        ClassLexeme newClass = LexemeVerification.GetClass(previousLexeme + currentLexeme);
+                        
+                        if (IsRequired—lass(newClass, ClassLexeme.keyword, ClassLexeme.type, ClassLexeme.operation))
+                        {
+                            currentLexeme = previousLexeme + currentLexeme;
+                            UpdateCurrentLexeme();
+
+                            newLexeme = new LexemeData(previousLexemeIndexLine, previousLexemeIndexSymbol, currentLexemeClass, currentLexeme, currentLexeme);
+                            previousLexeme = currentLexeme;
+                            
+                        }
+                        if (newLexeme != null)
+                        {
+                            lexemesData.Remove(lexemesData[lexemesData.Count - 1]);
+                            symbol = null;
+                            previousLexeme = null;
+                            return newLexeme;
+                        }
+                    }
+
+                    previousSymbol = symbol;
+                    previousSymbolClass = symbolClass;
+
+                    if (VerifyNextSymbolAndCheckOnNull())
+                    {
+                        UpdateCurrentLexeme();
+                        return new LexemeData(currentIndexLine, currentIndexSymbol, currentLexemeClass, currentLexemeValue, currentLexeme);
+                    }
+
+                    if (symbol.Equals("."))
+                    {
+                        dotCount++;
+                        currentLexeme += symbol;
+
+                        if (dotCount > 1)
+                            SaveErrorForLexeme("incorrect variable format");
+                           
+                        previousSymbol = symbol;
+                        previousSymbolClass = symbolClass;
+
+                        if (VerifyNextSymbolAndCheckOnNull())
+                            return lexemeData;
+
+                        if (currentIndexLine != fileReader.GetIndexLine())
+                        {
+                            currentLexeme = currentLexeme.Remove(currentLexeme.Length - 2, 2);
+                            SaveErrorForLexeme("incorrect variable format");
+                            return lexemeData;
+                        }
+                    }
+                }
+
+                if (currentLexeme != null)
+                {
+                    if (previousSymbol.Equals("."))
+                    {
+                        SaveErrorForLexeme("incorrect variable format");
+                        return lexemeData;
+                    }
+                    if (IsRequired—lass(currentLexemeClass, ClassLexeme.separator, ClassLexeme.control, ClassLexeme.NONAME, ClassLexeme.standart))
+                    {
+                        UpdateCurrentLexeme();
+
+                        return new LexemeData(currentIndexLine, currentIndexSymbol, currentLexemeClass, currentLexemeValue, currentLexeme);
                     }
                 }
             }
-        }
 
-        private void CheckAndAddLexemeToListAndUpdateParameters()
-        {
-            if (!isNew)
+            //SEPARATORS
+            if (IsRequired—lass(symbolClass, ClassLexeme.separator))
             {
-                CheckLexeme();
-                AddLexemeToList();
-                UpdateParameters();
+                SaveIndexes();
+                currentLexeme = symbol;
+                UpdateCurrentLexeme();
+
+                if (VerifyNextSymbolAndCheckOnNull())
+                    return new LexemeData(currentIndexLine, currentIndexSymbol, currentLexemeClass, currentLexemeValue, currentLexeme);
+
+                if (IsRequired—lass(symbolClass, ClassLexeme.standart))
+                {
+                    if (currentLexeme.Equals("."))
+                    {
+                        currentLexeme += symbol;
+                        SaveErrorForLexeme("incorrect variable format");
+                    }
+                }
+                return new LexemeData(currentIndexLine, currentIndexSymbol, currentLexemeClass, currentLexeme, currentLexeme);
             }
+
+            return lexemeData;
         }
 
-        private void CheckLexeme()
+        private void UpdateCurrentLexeme()
         {
+            currentLexemeClass = LexemeVerification.GetClass(currentLexeme);
             if (IsRequired—lass(currentLexemeClass, ClassLexeme.NONAME, ClassLexeme.standart))
-                currentLexemeClass = ClassLexeme.variable;
+                currentLexemeClass = IdentifyClass();
+            currentLexemeValue = SetValue();
         }
 
-        private void AddLexemeToList()
+        private ClassLexeme IdentifyClass()
         {
-            lexemesData.Add(new LexemeData(currentIndexLine, currentIndexInLine, currentLexemeClass, currentLexeme, currentLexeme));
+            if (IsInt(currentLexeme))
+                return ClassLexeme.integer;
+            else if (IsFloat(currentLexeme))
+                return ClassLexeme.real;
+            return ClassLexeme.variable;
         }
 
-        private void UpdateParameters()
+        private string SetValue()
         {
-            isNew = true;
-            currentLexeme = null;
+            if (IsRequired—lass(currentLexemeClass, ClassLexeme.real))
+                return double.Parse(currentLexeme.Replace('.', ',')).ToString();
+            return currentLexeme;
         }
 
-        ///<summary> œÓ‚ÂˇÂÚ ‡‚ÂÌ ÎË ÍÎ‡ÒÒ Ó‰ÌÓÏÛ ËÁ ÛÍ‡Á‡ÌÌ˚ı. </summary>
-        private bool IsRequired—lass(ClassLexeme lexemeClass, params ClassLexeme[] classes)
+        private bool VerifyNextSymbolAndCheckOnNull()
         {
-            for (int i = 0; i < classes.Length; i++)
-            {
-                if (lexemeClass == classes[i])
-                    return true;
-            }
+            symbol = fileReader.ReadNextSymbolAndChangeIndexes();
+            if (symbol == null)
+                return true;
+            symbolClass = LexemeVerification.GetClass(symbol);
             return false;
         }
 
-        private void MakeEdits()
+        public List<LexemeData> GetExistingListLexemesData()
         {
+            return lexemesData;
+        }
+
+        public void LexemesDataOutputInConsole()
+        {
+            Console.WriteLine("Number of lexemes: " + lexemesData.Count);
             for (int i = 0; i < lexemesData.Count; i++)
+                Console.WriteLine("" + lexemesData[i].indexLine + '\t' + lexemesData[i].indexSymbol + '\t' + lexemesData[i].classLexeme + '\t' + "\"" + lexemesData[i].value + "\"" + '\t' + lexemesData[i].code);
+            if (!errorData.IsProblemIsNull())
+                Console.WriteLine(errorData.GetLineIndex() + "\t" + errorData.GetSymbolIndex() + "\t" + errorData.GetErrorText());
+        }
+
+        public void LexemesDataOutputInFile()
+        {
+            using (StreamWriter streamWriter = new StreamWriter(filePath.Remove(filePath.Length - 4, 4) + "_output.txt"))
             {
-                if (lexemesData[i].code.Equals("\'"))
-                {
-                    if (i < lexemesData.Count - 1)
-                    {
-                        int nextLexemeIndex = i + 1;
-                        while (!lexemesData[nextLexemeIndex].code.Equals("\'"))
-                        {
-                            if (lexemesData[i].indexLine != lexemesData[nextLexemeIndex].indexLine | i == lexemesData.Count - 1)
-                            {
-                                SaveErrorForLexeme(lexemesData[i], "closing symbol not found");
-                                return;
-                            }
-                            AddToCurrentAndRemoveNextLexeme(lexemesData[i], lexemesData[i + 1]);
-                        }
-                        AddToCurrentAndRemoveNextLexeme(lexemesData[i], lexemesData[i + 1]);
-                        lexemesData[i].SetClass(ClassLexeme.@string);
-                    }
-                    else
-                    {
-                        SaveErrorForLexeme(lexemesData[i], "closing symbol not found");
-                    }
-                }
-
-                if (IsRequired—lass(lexemesData[i].classLexeme, ClassLexeme.variable))
-                {
-                    if (IsInt(lexemesData[i].code))
-                        lexemesData[i].SetClass(ClassLexeme.integer);
-                }
-            }
-
-            for (int i = 0; i < lexemesData.Count; i++)
-            {
-                if (i < lexemesData.Count - 3)
-                {
-                    bool isRequired1 = IsRequired—lass(lexemesData[i].classLexeme, ClassLexeme.variable, ClassLexeme.integer, ClassLexeme.real);
-                    bool isRequired2 = IsRequired—lass(lexemesData[i + 2].classLexeme, ClassLexeme.variable, ClassLexeme.integer, ClassLexeme.real);
-                    if (isRequired1 & lexemesData[i + 1].code.Equals(".") & isRequired2 & lexemesData[i + 3].code.Equals("."))
-                        SaveErrorForLexeme(lexemesData[i + 3], "incorrect variable format");
-                }
-
-                if (i < lexemesData.Count - 2)
-                {
-                    bool isRequired1 = IsRequired—lass(lexemesData[i].classLexeme, ClassLexeme.integer);
-                    bool isRequired2 = IsRequired—lass(lexemesData[i + 2].classLexeme, ClassLexeme.integer);
-                    if (isRequired1 & lexemesData[i + 1].code.Equals(".") & isRequired2)
-                    {
-                        if (lexemesData[i].indexLine == lexemesData[i + 1].indexLine & lexemesData[i].indexLine == lexemesData[i + 2].indexLine)
-                        {
-                            lexemesData[i].value = double.Parse(lexemesData[i].code + "," + lexemesData[i + 2].code).ToString();
-                            lexemesData[i].code += "." + lexemesData[i + 2].code;
-                            lexemesData[i].SetClass(ClassLexeme.real);
-                            lexemesData.RemoveRange(i + 1, 2);
-                        }
-                        else
-                        {
-                            SaveErrorForLexeme(lexemesData[i + 2], "incorrect variable format");
-                        }
-                    }
-                }
+                for (int i = 0; i < lexemesData.Count; i++)
+                    streamWriter.WriteLine("" + lexemesData[i].indexLine + '\t' + lexemesData[i].indexSymbol + '\t' + lexemesData[i].classLexeme + '\t' + "\"" + lexemesData[i].value + "\"" + '\t' + lexemesData[i].code);
+                if (!errorData.IsProblemIsNull())
+                    streamWriter.WriteLine(errorData.GetLineIndex() + "\t" + errorData.GetSymbolIndex() + "\t" + errorData.GetErrorText());
             }
         }
 
-        private void AddToCurrentAndRemoveNextLexeme(LexemeData currentLexeme, LexemeData nextLexeme)
+        private void SaveIndexes()
         {
-            currentLexeme.code += nextLexeme.code;
-            currentLexeme.value += nextLexeme.code;
-            lexemesData.Remove(nextLexeme);
+            currentIndexLine = fileReader.GetIndexLine();
+            currentIndexSymbol = fileReader.GetIndexSymbol();
+        }
+
+        private bool IsTwoSymbolOperation()
+        {
+            if (currentLexeme.Length < 2)
+                return false;
+            return IsRequired—lass(currentLexemeClass, ClassLexeme.operation);
+        }
+
+        private void SkipCommentary()
+        {
+            int indexCurrentLine = fileReader.GetIndexLine();
+            while (indexCurrentLine == fileReader.GetIndexLine())
+                if (VerifyNextSymbolAndCheckOnNull())
+                    break;
+        }
+
+        private void SkipSpaceAndControl()
+        {
+            while (symbol.Equals(" ") | IsRequired—lass(symbolClass, ClassLexeme.control))
+                if (VerifyNextSymbolAndCheckOnNull())
+                    break;
         }
 
         private bool IsInt(string lexemeCode)
         {
             for (int i = 0; i < lexemeCode.Length; i++)
-            {
                 if (!(lexemeCode[i] >= '0' & lexemeCode[i] <= '9'))
                     return false;
-            }
             return true;
         }
 
-        private void SaveErrorForLexeme(LexemeData lexemeData, string errorMessage = "")
+        private bool IsFloat(string lexemeCode)
         {
-            errorData = new ErrorData(lexemeData.indexLine, lexemeData.indexInLine, "error: " + errorMessage + " (" + lexemeData.code + ")");
+            for (int i = 0; i < lexemeCode.Length; i++)
+                if (!(lexemeCode[i] >= '0' & lexemeCode[i] <= '9'))
+                    if (!lexemeCode[i].Equals('.'))
+                        return false;
+            return true;
+        }
+
+        private void SaveErrorForLexeme(string errorMessage = "")
+        {
+            errorData = new ErrorData(currentIndexLine, currentIndexSymbol, "error: " + errorMessage + " (" + currentLexeme + ")");
         }
 
         private void SaveErrorForSymbol(string errorMessage = "")
@@ -261,8 +396,16 @@ namespace Programming_Compilers_Pascal
 
         public ErrorData GetError()
         {
-            //return errorData.IsProblemIdentified() ? errorData : null;
             return errorData;
+        }
+
+        ///<summary> œÓ‚ÂˇÂÚ ‡‚ÂÌ ÎË ÍÎ‡ÒÒ Ó‰ÌÓÏÛ ËÁ ÛÍ‡Á‡ÌÌ˚ı. </summary>
+        private bool IsRequired—lass(ClassLexeme lexemeClass, params ClassLexeme[] classes)
+        {
+            for (int i = 0; i < classes.Length; i++)
+                if (lexemeClass == classes[i])
+                    return true;
+            return false;
         }
     }
 }
