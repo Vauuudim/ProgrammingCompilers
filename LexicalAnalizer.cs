@@ -59,7 +59,6 @@ namespace Programming_Compilers_Pascal
             if (symbol == null)
                 if (VerifyNextSymbolAndCheckOnNull())
                     return lexemeData;
-
             //SPACE/CONTROL
             SkipSpaceAndControl();
 
@@ -71,6 +70,12 @@ namespace Programming_Compilers_Pascal
             }
 
             //COMMENTARY
+            if (symbol.Equals("{"))
+            {
+                SkipBlockCommentary();
+                if (symbol == null)
+                    return lexemeData;
+            }
             if (symbol.Equals("/"))
             {
                 if (previousSymbol != null)
@@ -78,16 +83,16 @@ namespace Programming_Compilers_Pascal
                     if (previousSymbol.Equals("/") & symbol.Equals("/"))
                     {
                         lexemesData.Remove(lexemesData[lexemesData.Count - 1]);
-                        SkipCommentary();
+                        SkipStringCommentary();
                     }
                 }
-
-                previousSymbol = symbol;
-                previousSymbolClass = symbolClass;           
-
+                SavePreviousSymbol();
                 if (symbol == null)
                     return lexemeData;
             }
+
+            //SPACE/CONTROL (AGAIN)
+            SkipSpaceAndControl();
 
             //STRINGS
             if (symbol.Equals("'"))
@@ -125,9 +130,7 @@ namespace Programming_Compilers_Pascal
             if (IsRequired—lass(symbolClass, ClassLexeme.operation))
             {
                 SaveIndexes();
-
-                previousSymbol = symbol;
-                previousSymbolClass = symbolClass;
+                SavePreviousSymbol();
 
                 if (VerifyNextSymbolAndCheckOnNull())
                     return lexemeData;
@@ -147,12 +150,12 @@ namespace Programming_Compilers_Pascal
                 return new LexemeData(currentIndexLine, currentIndexSymbol, previousSymbolClass, previousSymbol, previousSymbol);
             }
 
-            //COMPOSITE (MULTI-LETTER) / NUMBERS
+            //COMPOSITE (MULTI-LETTER)
             if (IsRequired—lass(symbolClass, ClassLexeme.standart))
             {
                 SaveIndexes();
-                int dotCount = 0;
-                while (IsRequired—lass(symbolClass, ClassLexeme.standart))
+
+                while (IsRequired—lass(symbolClass, ClassLexeme.standart, ClassLexeme.number))
                 {
                     currentLexeme += symbol;
                     currentLexemeClass = LexemeVerification.GetClass(currentLexeme);
@@ -172,17 +175,20 @@ namespace Programming_Compilers_Pascal
                                 previousLexeme = currentLexeme;
                             }
                         }
+
+                        symbol = null;
+
                         if (newLexeme != null)
                         {
                             lexemesData.Remove(lexemesData[lexemesData.Count - 1]);
-                            symbol = null;
                             previousLexeme = null;
                             return newLexeme;
                         }
-                        symbol = null;
+
                         previousLexeme = currentLexeme;
                         previousLexemeIndexLine = currentIndexLine;
                         previousLexemeIndexSymbol = currentIndexSymbol;
+
                         return new LexemeData(currentIndexLine, currentIndexSymbol, currentLexemeClass, currentLexeme, currentLexeme);
                     }
 
@@ -190,7 +196,7 @@ namespace Programming_Compilers_Pascal
                     {
                         LexemeData newLexeme = null;
                         ClassLexeme newClass = LexemeVerification.GetClass(previousLexeme + currentLexeme);
-                        
+
                         if (IsRequired—lass(newClass, ClassLexeme.keyword, ClassLexeme.type, ClassLexeme.operation))
                         {
                             currentLexeme = previousLexeme + currentLexeme;
@@ -198,7 +204,7 @@ namespace Programming_Compilers_Pascal
 
                             newLexeme = new LexemeData(previousLexemeIndexLine, previousLexemeIndexSymbol, currentLexemeClass, currentLexeme, currentLexeme);
                             previousLexeme = currentLexeme;
-                            
+
                         }
                         if (newLexeme != null)
                         {
@@ -209,13 +215,83 @@ namespace Programming_Compilers_Pascal
                         }
                     }
 
-                    previousSymbol = symbol;
-                    previousSymbolClass = symbolClass;
+                    SavePreviousSymbol();
 
                     if (VerifyNextSymbolAndCheckOnNull())
                     {
                         UpdateCurrentLexeme();
                         return new LexemeData(currentIndexLine, currentIndexSymbol, currentLexemeClass, currentLexemeValue, currentLexeme);
+                    }
+                }
+                UpdateCurrentLexeme();
+                return new LexemeData(currentIndexLine, currentIndexSymbol, currentLexemeClass, currentLexeme, currentLexeme);
+            }
+
+            //NUMBERS
+            if (IsRequired—lass(symbolClass, ClassLexeme.number))
+            {
+                SaveIndexes();
+                int dotCount = 0;
+                int eCount = 0;
+
+                while (IsRequired—lass(symbolClass, ClassLexeme.standart, ClassLexeme.number))
+                {
+                    currentLexeme += symbol;
+                    currentLexemeClass = LexemeVerification.GetClass(currentLexeme);
+
+                    SavePreviousSymbol();
+
+                    if (VerifyNextSymbolAndCheckOnNull())
+                    {
+                        UpdateCurrentLexeme();
+                        return new LexemeData(currentIndexLine, currentIndexSymbol, currentLexemeClass, currentLexemeValue, currentLexeme);
+                    }
+
+                    if (IsRequired—lass(symbolClass, ClassLexeme.standart))
+                    {
+                        currentLexeme += symbol;
+                        if (symbol.Equals("e") & dotCount == 0)
+                        {
+                            eCount++;
+
+                            if (VerifyNextSymbolAndCheckOnNull())
+                            {
+                                SaveErrorForLexeme("incorrect variable format");
+                                return lexemeData;
+                            }
+
+                            if (!IsRequired—lass(symbolClass, ClassLexeme.number) & !(symbol.Equals("+") | symbol.Equals("-")) | dotCount > 0)
+                            {
+                                currentLexeme += symbol;
+                                SaveErrorForLexeme("incorrect variable format");
+                                return lexemeData;
+                            }
+                            
+                            if (symbol.Equals("+") | symbol.Equals("-"))
+                            {
+                                currentLexeme += symbol;
+
+                                if (VerifyNextSymbolAndCheckOnNull())
+                                {
+                                    SaveErrorForLexeme("incorrect variable format");
+                                    return lexemeData;
+                                }
+                                else
+                                {
+                                    if (!IsRequired—lass(symbolClass, ClassLexeme.number))
+                                    {
+                                        currentLexeme += symbol;
+                                        SaveErrorForLexeme("incorrect variable format");
+                                        return lexemeData;
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            SaveErrorForLexeme("incorrect variable format");
+                            return lexemeData;
+                        }
                     }
 
                     if (symbol.Equals("."))
@@ -224,17 +300,25 @@ namespace Programming_Compilers_Pascal
                         currentLexeme += symbol;
 
                         if (dotCount > 1)
+                        {
                             SaveErrorForLexeme("incorrect variable format");
-                           
-                        previousSymbol = symbol;
-                        previousSymbolClass = symbolClass;
+                            return lexemeData;
+                        }
+
+                        if (eCount != 0)
+                        {
+                            currentLexeme += symbol;
+                            SaveErrorForLexeme("incorrect variable format");
+                            return lexemeData;
+                        }
+
+                        SavePreviousSymbol();
 
                         if (VerifyNextSymbolAndCheckOnNull())
                             return lexemeData;
 
-                        if (currentIndexLine != fileReader.GetIndexLine())
+                        if (!IsRequired—lass(symbolClass, ClassLexeme.number))
                         {
-                            currentLexeme = currentLexeme.Remove(currentLexeme.Length - 2, 2);
                             SaveErrorForLexeme("incorrect variable format");
                             return lexemeData;
                         }
@@ -248,10 +332,9 @@ namespace Programming_Compilers_Pascal
                         SaveErrorForLexeme("incorrect variable format");
                         return lexemeData;
                     }
-                    if (IsRequired—lass(currentLexemeClass, ClassLexeme.separator, ClassLexeme.control, ClassLexeme.NONAME, ClassLexeme.standart))
+                    if (IsRequired—lass(currentLexemeClass, ClassLexeme.separator, ClassLexeme.control, ClassLexeme.NONAME, ClassLexeme.standart, ClassLexeme.number))
                     {
                         UpdateCurrentLexeme();
-
                         return new LexemeData(currentIndexLine, currentIndexSymbol, currentLexemeClass, currentLexemeValue, currentLexeme);
                     }
                 }
@@ -267,7 +350,7 @@ namespace Programming_Compilers_Pascal
                 if (VerifyNextSymbolAndCheckOnNull())
                     return new LexemeData(currentIndexLine, currentIndexSymbol, currentLexemeClass, currentLexemeValue, currentLexeme);
 
-                if (IsRequired—lass(symbolClass, ClassLexeme.standart))
+                if (IsRequired—lass(symbolClass, ClassLexeme.standart, ClassLexeme.number))
                 {
                     if (currentLexeme.Equals("."))
                     {
@@ -284,7 +367,7 @@ namespace Programming_Compilers_Pascal
         private void UpdateCurrentLexeme()
         {
             currentLexemeClass = LexemeVerification.GetClass(currentLexeme);
-            if (IsRequired—lass(currentLexemeClass, ClassLexeme.NONAME, ClassLexeme.standart))
+            if (IsRequired—lass(currentLexemeClass, ClassLexeme.NONAME, ClassLexeme.standart, ClassLexeme.number))
                 currentLexemeClass = IdentifyClass();
             currentLexemeValue = SetValue();
         }
@@ -345,6 +428,12 @@ namespace Programming_Compilers_Pascal
             currentIndexSymbol = fileReader.GetIndexSymbol();
         }
 
+        private void SavePreviousSymbol()
+        {
+            previousSymbol = symbol;
+            previousSymbolClass = symbolClass;
+        }
+
         private bool IsTwoSymbolOperation()
         {
             if (currentLexeme.Length < 2)
@@ -352,12 +441,22 @@ namespace Programming_Compilers_Pascal
             return IsRequired—lass(currentLexemeClass, ClassLexeme.operation);
         }
 
-        private void SkipCommentary()
+        private void SkipStringCommentary()
         {
             int indexCurrentLine = fileReader.GetIndexLine();
             while (indexCurrentLine == fileReader.GetIndexLine())
                 if (VerifyNextSymbolAndCheckOnNull())
                     break;
+        }
+
+        private void SkipBlockCommentary()
+        {
+            while (!symbol.Equals("}"))
+            {
+                if (VerifyNextSymbolAndCheckOnNull())
+                    break;
+            }
+            VerifyNextSymbolAndCheckOnNull();
         }
 
         private void SkipSpaceAndControl()
@@ -377,11 +476,10 @@ namespace Programming_Compilers_Pascal
 
         private bool IsFloat(string lexemeCode)
         {
-            for (int i = 0; i < lexemeCode.Length; i++)
-                if (!(lexemeCode[i] >= '0' & lexemeCode[i] <= '9'))
-                    if (!lexemeCode[i].Equals('.'))
-                        return false;
-            return true;
+            if (float.TryParse(currentLexeme.Replace('.', ','), out Single result))
+                return true;
+
+            return false;
         }
 
         private void SaveErrorForLexeme(string errorMessage = "")

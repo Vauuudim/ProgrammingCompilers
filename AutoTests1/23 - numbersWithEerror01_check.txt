@@ -1,0 +1,2 @@
+1	1	real	"530"	53e1
+2	1	error: incorrect variable format (9e-)

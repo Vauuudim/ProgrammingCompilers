@@ -1,0 +1,2 @@
+1	1	variable	"abc123"	abc123
+2	1	error: incorrect variable format (123a)

@@ -9,7 +9,6 @@ namespace Programming_Compilers_Pascal
         private List<LexemeData> lexemesData = new List<LexemeData>();
         private int indexCurrentLexeme = 0;
         private LexemeData lexeme = null;
-
         private string filePath;
 
         public SyntaxAnalizer(List<LexemeData> lexemesData, string filePath = null)
@@ -29,13 +28,12 @@ namespace Programming_Compilers_Pascal
                         Node node = ParseExpr();
                         if (node == null)
                             break;
-                        string[] str = node.Print().Split('\n');
+                        string[] str = node.GetValue().Split('\n');
 
                         for (int i = 0; i < str.Length; i++)
-                        {
+                        {        
                             streamWriter.WriteLine(str[i]);
                         }
-                        
                     }
                 }
             }
@@ -46,7 +44,7 @@ namespace Programming_Compilers_Pascal
                     Node node = ParseExpr();
                     if (node == null)
                         break;
-                    Console.WriteLine(node.Print());
+                    Console.WriteLine(node.GetValue());
                 }
             }
         }
@@ -57,7 +55,7 @@ namespace Programming_Compilers_Pascal
             LexemeData operation = GetCurrentLexeme();
             if (operation != null)
             {
-                while (operation.value.Equals("+") | operation.value.Equals("-"))
+                while (operation.code.Equals("+") | operation.code.Equals("-"))
                 {
                     GetNextLexeme();
                     Node right = ParseTerm();
@@ -76,7 +74,7 @@ namespace Programming_Compilers_Pascal
             LexemeData operation = GetCurrentLexeme();
             if (operation != null)
             {
-                while (operation.value.Equals("*") | operation.value.Equals("/"))
+                while (operation.code.Equals("*") | operation.code.Equals("/") | operation.code.Equals("mod") | operation.code.Equals("div"))
                 {
                     GetNextLexeme();
                     Node right = ParseFactor();
@@ -97,17 +95,15 @@ namespace Programming_Compilers_Pascal
                 return null;
             if (lexeme.classLexeme == ClassLexeme.variable | lexeme.classLexeme == ClassLexeme.integer | lexeme.classLexeme == ClassLexeme.real | lexeme.classLexeme == ClassLexeme.@string)
                 return new LexemeNode(lexeme);
-            if (lexeme.value.Equals('('))
+            if (lexeme.code.Equals('('))
             {
                 Node left = ParseExpr();
-                if (lexeme.value.Equals(')'))
-                {
-                    return null;
-                }
 
+                if (lexeme.code.Equals(')'))
+                    return null;
+                
                 return left;
             }
-
             return null;
         }
 
@@ -129,20 +125,33 @@ namespace Programming_Compilers_Pascal
 
     public abstract class Node
     {
-        public abstract string Print(int level = 1);
+        public abstract string GetValue(int level = 1);
+        public abstract void SaveError(string textError);
+        public abstract string GetError();
     }
 
     public class LexemeNode : Node
     {
         public LexemeData lexemeData;
+        public string error = null;
+
         public LexemeNode(LexemeData lexemeData)
         {
             this.lexemeData = lexemeData;
         }
 
-        public override string Print(int level = 1)
+        public override string GetValue(int level = 1)
         {
-            return lexemeData.value;
+            return lexemeData.code;
+        }
+
+        public override void SaveError(string textError)
+        {
+            error = textError;
+        }
+        public override string GetError()
+        {
+            return error;
         }
     }
 
@@ -151,6 +160,7 @@ namespace Programming_Compilers_Pascal
         public Node left;
         public LexemeData operation;
         public Node right;
+        public string error = null;
 
         public BinOperationNode(Node left, LexemeData operation, Node right)
         {
@@ -159,7 +169,7 @@ namespace Programming_Compilers_Pascal
             this.right = right;
         }
 
-        public override string Print(int level = 1)
+        public override string GetValue(int level = 1)
         {
             string space = null;
             for (int i = 0; i < level; i++)
@@ -169,9 +179,9 @@ namespace Programming_Compilers_Pascal
             string left = null;
 
             if (this.right != null)
-                right = this.right.Print(level + 1);
+                right = this.right.GetValue(level + 1);
             if (this.left != null)
-                left = this.left.Print(level + 1);
+                left = this.left.GetValue(level + 1);
 
             if (this.right != null & this.left != null)
                 return $"{operation.code}" + '\n' + $"{space}{left}" + '\n' + $"{space}{right}";
@@ -182,7 +192,44 @@ namespace Programming_Compilers_Pascal
 
             return null;
         }
+
+        public override void SaveError(string textError)
+        {
+            error = textError;
+        }
+        public override string GetError()
+        {
+            return error;
+        }
     }
+
+    public class UnaryOperationNode : Node
+    {
+        public LexemeData operation;
+        public Node operand;
+        public string error;
+
+        public UnaryOperationNode(Node operand, LexemeData operation)
+        {
+            this.operation = operation;
+            this.operand = operand;
+        }
+
+        public override string GetValue(int level = 1)
+        {
+            return operation.code;
+        }
+
+        public override void SaveError(string textError)
+        {
+            error = textError;
+        }
+        public override string GetError()
+        {
+            return error;
+        }
+    }
+
 }
 
 //╓  ╙  ║╓

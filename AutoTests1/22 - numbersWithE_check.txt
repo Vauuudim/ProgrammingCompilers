@@ -1,0 +1,3 @@
+1	1	variable	"e"	e
+2	1	real	"0,5"	5e-1
+3	1	real	"10000"	1e4

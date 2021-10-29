@@ -1,9 +1,8 @@
 1	1	separator	"."	.
 1	4	separator	","	,
-2	1	separator	"{"	{
-3	1	separator	"]"	]
-3	3	separator	"("	(
-3	4	separator	")"	)
-4	1	separator	"\"	\
-4	2	separator	"\"	\
-5	1	separator	";"	;
+2	1	separator	"]"	]
+2	3	separator	"("	(
+2	4	separator	")"	)
+3	1	separator	"\"	\
+3	2	separator	"\"	\
+4	1	separator	";"	;
